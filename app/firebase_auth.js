@@ -5,12 +5,12 @@ import { getFirestore } from "firebase/firestore"
 
 // FIREBASE SETUP
 const firebaseConfig = {
-  apiKey: "AIzaSyBjOnik-44b3t6HqNAPN_iy13yyVcPZR0c",
-  authDomain: "exam-app-eb456.firebaseapp.com",
-  projectId: "exam-app-eb456",
-  storageBucket: "exam-app-eb456.firebasestorage.app",
-  messagingSenderId: "829429204380",
-  appId: "1:829429204380:web:76c71948fce530ac1a7459"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
