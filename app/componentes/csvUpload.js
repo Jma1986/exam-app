@@ -93,46 +93,50 @@ function CsvUpload() {
     setUploadStatus(`${successfulUploads} questions uploaded successfully.`);
   };
 
-  return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Field:</label>
-          <select value={field} onChange={(e) => setField(e.target.value)} required>
-            <option value="">Select Field</option>
-            {fields.map((f, index) => (
-              <option key={index} value={f}>{f}</option>
-            ))}
-            <option value="new">Add New Field</option>
-          </select>
-          {field === 'new' && (
-            <input type="text" placeholder="New Field" value={newField} onChange={(e) => { setNewField(e.target.value); setField('new'); }} />
-          )}
-        </div>
-        <div>
-          <label>Subject:</label>
-          <select value={subject} onChange={(e) => setSubject(e.target.value)}>
-            <option value="">Select Subject</option>
-            {subjects.map((s, index) => (
-              <option key={index} value={s}>{s}</option>
-            ))}
-            <option value="new">Add New Subject</option>
-          </select>
-          {subject === 'new' && (
-            <input type="text" placeholder="New Subject" value={newSubject} onChange={(e) => { setNewSubject(e.target.value); setSubject('new'); }} />
-          )}
-        </div>
-        <div>
-          <label>Upload CSV:</label>
-          <input type="file" accept=".csv" onChange={handleCsvUpload} />
-        </div>
-        <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-          Submit
-        </button>
-        {uploadStatus && <div>{uploadStatus}</div>}
-      </form>
+return (
+    <div className="p-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="block text-gray-800">Materia:</label>
+                <select className="block w-full mt-1 p-2 border border-gray-300 rounded-md text-gray-700" value={field} onChange={(e) => setField(e.target.value)} required>
+                    <option value="">Elige una materia</option>
+                    {fields.map((f, index) => (
+                        <option key={index} value={f}>{f}</option>
+                    ))}
+                    <option value="new">Añade una nueva materia</option>
+                </select>
+                {field === 'new' && (
+                    <input type="text" placeholder="New Field" value={newField} onChange={(e) => { setNewField(e.target.value); setField('new'); }} className="block w-full mt-2 p-2 border border-gray-300 rounded-md" />
+                )}
+            </div>
+            
+            <div>
+                <label className="block text-gray-800">Tema:</label>
+                <select className="block w-full mt-1 p-2 border border-gray-300 rounded-md text-gray-700" value={subject} onChange={(e) => setSubject(e.target.value)}>
+                    <option value="">Elige un tema</option>
+                    {subjects.map((s, index) => (
+                        <option key={index} value={s}>{s}</option>
+                    ))}
+                    <option value="new">añade un nuevo tema</option>
+                </select>
+                {subject === 'new' && (
+                    <input type="text" placeholder="New Subject" value={newSubject} onChange={(e) => { setNewSubject(e.target.value); setSubject('new'); }} className="block w-full mt-2 p-2 border border-gray-300 rounded-md" />
+                )}
+            </div>
+            
+            <div>
+                <label className="block text-gray-800">Sube un archivo .csv:</label>
+                <input className="block w-full mt-1 p-2 border border-gray-300 rounded-md text-gray-700" type="file" accept=".csv" onChange={handleCsvUpload} />
+            </div>
+            
+            <button type="submit" className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                Submit
+            </button>
+            
+            {uploadStatus && <div className="mt-4 text-gray-800">{uploadStatus}</div>}
+        </form>
     </div>
-  );
+);
 }
 
 export default CsvUpload;
