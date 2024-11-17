@@ -80,6 +80,7 @@ export default function ExamCreation({ user }) {
                 class: selectedClass,
                 questions: selectedQuestions.map(q => q.id),
                 createdBy: user?.email,
+                active: "false",
             });
             setMessage('Exam created successfully!');
             setTitle('');

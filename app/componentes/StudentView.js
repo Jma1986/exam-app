@@ -1,150 +1,155 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, doc, getDocs } from "firebase/firestore";
-import { db } from "../firebase_auth.js";
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase_auth.js';
+import Exam from './Exam';
+import ExamReview from './ExamReview.js';
 
 export default function StudentView({ user, onSignOut }) {
-  const [examStarted, setExamStarted] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [answer, setAnswer] = useState('');
-  const [examDocRef, setExamDocRef] = useState(null);
-  const [startTime, setStartTime] = useState(null);
-  const [questionStartTime, setQuestionStartTime] = useState(null);
-  const [responses, setResponses] = useState([]);
+  const [view, setView] = useState('dashboard');
+  const [collapsedCompletedExams, setCollapsedCompletedExams] = useState(false);
+  const [assignedExams, setAssignedExams] = useState([]);
+  const [completedExams, setCompletedExams] = useState([]);
+  const [currentExam, setCurrentExam] = useState(null);
 
-  // Function to start the exam
-  const handleStartExam = () => {
-    setExamStarted(true);
-    setStartTime(Date.now());
-    fetchRandomQuestion();
-  };
+  useEffect(() => {
+    const fetchExams = async () => {
+      try {
+        // Fetch classes where the student is registered
+        const classesSnapshot = await getDocs(collection(db, 'clases'));
+        const studentClasses = classesSnapshot.docs
+          .filter(doc => doc.data().students.includes(user?.email))
+          .map(doc => doc.id);
 
-  // Function to fetch a random question from the database
-  const fetchRandomQuestion = async () => {
-    try {
-      const questionsSnapshot = await getDocs(collection(db, "Banco de preguntas"));
-      const questions = questionsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      const randomIndex = Math.floor(Math.random() * questions.length);
-      setCurrentQuestion(questions[randomIndex]);
-      setQuestionStartTime(Date.now());
-    } catch (error) {
-      console.error("Error fetching random question: ", error);
-    }
-  };
+        // Fetch assigned exams for the student's classes
+        const assignedSnapshot = await getDocs(collection(db, 'examenes_creados'));
+        const assigned = assignedSnapshot.docs
+          .filter(doc => studentClasses.includes(doc.data().class))
+          .map(doc => ({ id: doc.id, ...doc.data() }));
+        setAssignedExams(assigned);
 
-  // Function to handle submitting an answer
-  const handleSubmitAnswer = async () => {
-    if (!currentQuestion) return;
+        // Fetch completed exams by the student
+        const completedSnapshot = await getDocs(collection(db, 'examenes_realizados'));
+        const completed = completedSnapshot.docs
+          .filter(doc => doc.data().studentEmail === user?.email)
+          .map(doc => ({ id: doc.id, ...doc.data() }));
+        setCompletedExams(completed);
 
-    const timeTaken = Date.now() - questionStartTime;
-    const newResponse = {
-      question: currentQuestion.question,
-      answer: answer,
-      timeTaken: timeTaken,
-    };
-
-    setResponses((prevResponses) => [...prevResponses, newResponse]);
-
-    try {
-      if (!examDocRef) {
-        // Create a new exam document if it doesn't exist
-        const docRef = await addDoc(collection(db, "examenes"), {
-          studentName: user.displayName,
-          responses: [newResponse],
-          startTime: new Date(startTime),
-        });
-        setExamDocRef(docRef);
-      } else {
-        // Update the existing exam document
-        await updateDoc(examDocRef, {
-          responses: [...responses, newResponse],
-        });
+        // Remove completed exams from assigned exams
+        const completedExamIds = completed.map(exam => exam.examId);
+        setAssignedExams(prevAssignedExams => prevAssignedExams.filter(exam => !completedExamIds.includes(exam.id)));
+      } catch (error) {
+        console.error('Error fetching exams:', error);
       }
-    } catch (error) {
-      console.error("Error saving response: ", error);
-    }
+    };
+    fetchExams();
+  }, [user, view]);
 
-    // Clear the answer and fetch a new question
-    setAnswer('');
-    fetchRandomQuestion();
+  const toggleCompletedExamsCollapse = () => {
+    setCollapsedCompletedExams(prev => !prev);
   };
 
-  // Function to handle finishing the exam
-  const handleFinishExam = async () => {
-    if (!examDocRef) return;
-
-    const totalTimeTaken = Date.now() - startTime;
-
-    try {
-      await updateDoc(examDocRef, {
-        endTime: new Date(),
-        totalTimeTaken: totalTimeTaken,
-      });
-      console.log("Exam finished successfully");
-    } catch (error) {
-      console.error("Error finishing exam: ", error);
+  const handleEnterFullscreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch((err) => console.error('Error attempting to enable full-screen mode:', err));
+    } else if (elem.mozRequestFullScreen) { // Firefox
+      elem.mozRequestFullScreen().catch((err) => console.error('Error attempting to enable full-screen mode:', err));
+    } else if (elem.webkitRequestFullscreen) { // Chrome, Safari y Opera
+      elem.webkitRequestFullscreen().catch((err) => console.error('Error attempting to enable full-screen mode:', err));
+    } else if (elem.msRequestFullscreen) { // IE/Edge
+      elem.msRequestFullscreen().catch((err) => console.error('Error attempting to enable full-screen mode:', err));
     }
-
-    // Reset state
-    setExamStarted(false);
-    setCurrentQuestion(null);
-    setAnswer('');
-    setExamDocRef(null);
-    setStartTime(null);
-    setQuestionStartTime(null);
-    setResponses([]);
   };
 
   return (
     <div className="w-full min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="w-full bg-blue-600 text-gray-900 p-4 flex items-center justify-between">
-        <span>{user?.displayName}</span>
-        <button
-          id="sign-out-btn"
-          className="bg-red-500 text-white px-4 py-2 rounded shadow-md hover:bg-red-600 transition-all ease-in-out"
-          onClick={onSignOut}
-        >
-          Sign Out
-        </button>
-      </header>
+      {view === 'exam' && currentExam ? (
+        <Exam exam={currentExam} user={user} onFinish={() => {
+          setCurrentExam(null);
+          setView('pendingExams');
+        }} />
+      ) : (
+        <>
+          {/* Header */}
+          <header className="w-full bg-blue-600 text-gray-900 p-4 flex items-center justify-between">
+            <span>{user?.displayName}</span>
+            <button
+              id="sign-out-btn"
+              className="bg-red-500 text-white px-4 py-2 rounded shadow-md hover:bg-red-600 transition-all ease-in-out"
+              onClick={onSignOut}
+            >
+              Sign Out
+            </button>
+          </header>
 
-      {/* Main Content */}
-      <main className="flex flex-grow items-center justify-center p-6">
-        {!examStarted ? (
-          <button
-            className="bg-green-500 text-white px-6 py-3 rounded shadow-md hover:bg-green-600 transition-all ease-in-out"
-            onClick={handleStartExam}
-          >
-            Comenzar prueba
-          </button>
-        ) : (
-          <div className="w-full max-w-lg p-4 border rounded shadow-md bg-white">
-            {currentQuestion && (
-              <div className="mb-4">
-                <h2 className="text-xl font-bold mb-2">Pregunta:</h2>
-                <p className="text-gray-800 mb-4">{currentQuestion.question}</p>
-                <textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  className="w-full p-2 border rounded mb-4"
-                  placeholder="Escribe tu respuesta aquí..."
-                  rows="4"
-                />
+          {/* Main Content */}
+          <div className="flex flex-grow">
+            {/* Sidebar on the Left */}
+            <aside className="w-64 bg-gray-100 p-4 border-r overflow-y-auto">
+              <div className="mb-6">
                 <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded shadow-md hover:bg-blue-600 transition-all ease-in-out mr-2"
-                  onClick={handleSubmitAnswer}
+                  className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-900 font-bold"
+                  onClick={() => setView('pendingExams')}
                 >
-                  Enviar respuesta
-                </button>
-                <button className="bg-red-500 text-white px-4 py-2 rounded shadow-md hover:bg-red-600 transition-all ease-in-out fixed bottom-4 right-4" onClick={handleFinishExam}
-                >
-                  Finalizar prueba
+                  Pruebas pendientes
                 </button>
               </div>
-            )}
+
+              <div className="mt-6">
+                <button
+                  className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-900 font-bold"
+                  onClick={toggleCompletedExamsCollapse}
+                >
+                   Pruebas realizadas
+                </button>
+                {!collapsedCompletedExams && (
+                  <ul className="ml-4 mt-2 space-y-1">
+                    {completedExams.map(exam => (
+                      <li key={exam.id}
+                          onClick={() => {
+                            setCurrentExam(exam);
+                            setView('ExamReview') }}
+                          className="p-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-900">
+                        {exam.examTitle}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </aside>
+
+            {/* Main Dashboard Area */}
+            <main className="flex-grow p-6">
+              <div className="bg-white p-4 shadow-md rounded">
+                {view === 'ExamReview' && (<ExamReview exam={currentExam}/>)}
+                {view === 'pendingExams' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 text-gray-900">Pruebas pendientes</h2>
+                    <ul className="space-y-2">
+                      {assignedExams.map(exam => (
+                        <li key={exam.id} className="p-4 bg-gray-100 hover:bg-gray-200 rounded text-gray-900">
+                          <h3 className="text-lg font-semibold text-gray-900">{exam.title}</h3>
+                          <p className="text-gray-800 mb-2">{exam.description}</p>
+                          <button
+                            className="bg-green-500 text-white px-6 py-3 rounded shadow-md hover:bg-green-600 transition-all ease-in-out"
+                            onClick={() => {
+                              setCurrentExam(exam);
+                              setView('exam');
+                              handleEnterFullscreen();
+                            }}
+                          >
+                            Comenzar prueba
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </main>
           </div>
-        )}
-      </main>
+        </>
+      )}
     </div>
   );
 }

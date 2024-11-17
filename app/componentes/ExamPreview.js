@@ -40,7 +40,7 @@ export default function ExamPreview({ title, description, selectedClass, selecte
   };
 
 return (
-    <div className="w-full max-w-3xl p-6 bg-white shadow-md rounded border m-4 relative">
+    <div className="w-full max-w-3xl p-6 pb-12 bg-white shadow-md rounded border m-4 relative">
         <h2 className="text-2xl font-bold mb-4 text-gray-900 text-center">{title || 'No title provided'}</h2>
         <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-700">Description</h3>
