@@ -8,13 +8,18 @@ import CsvUpload from './csvUpload';
 import ClassForm from './ClassForm';
 import ExamCreation from './ExamCreation';
 import ExamPreview from './ExamPreview';
+import ExamReview from './ExamReview';
+import EvalExam from './EvalExam';
 
 export default function TeacherView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
   const [collapsedClasses, setCollapsedClasses] = useState({});
+  const [collapsedExams, setCollapsedExams] = useState({});
   const [classesData, setClassesData] = useState([]);
   const [examsData, setExamsData] = useState([]);
+  const [evaluatedExamsData, setEvaluatedExamsData] = useState({});
   const [selectedExam, setSelectedExam] = useState(null);
+  const [selectedStudentExam, setSelectedStudentExam] = useState(null);
   const [questions, setQuestions] = useState([]);
 
   useEffect(() => {
@@ -31,6 +36,13 @@ export default function TeacherView({ user, onSignOut }) {
           .filter(doc => doc.data().createdBy === user?.email)
           .map(doc => ({ id: doc.id, ...doc.data() }));
         setExamsData(exams);
+
+        const evaluatedSnapshot = await getDocs(collection(db, 'examenes_evaluados'));
+        const evaluatedExams = evaluatedSnapshot.docs.reduce((acc, doc) => {
+          acc[doc.id] = doc.data();
+          return acc;
+        }, {});
+        setEvaluatedExamsData(evaluatedExams);
 
         const questionSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
         const fetchedQuestions = questionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -49,9 +61,21 @@ export default function TeacherView({ user, onSignOut }) {
     }));
   };
 
+  const toggleExamCollapse = (examId) => {
+    setCollapsedExams((prev) => ({
+      ...prev,
+      [examId]: !prev[examId],
+    }));
+  };
+
   const handleExamClick = (exam) => {
     setSelectedExam(exam);
     setView('examPreview');
+  };
+
+  const handleStudentExamClick = (studentExam) => {
+    setSelectedStudentExam(studentExam);
+    setView('evalExam');
   };
 
   return (
@@ -83,6 +107,12 @@ export default function TeacherView({ user, onSignOut }) {
             onClick={() => setView('examCreation')}
           >
             Crear examen
+          </button>
+          <button
+            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
+            onClick={() => setView('examReview')}
+          >
+            Corregir examen
           </button>
         </nav>
         {/* User and Logout Button on the Right */}
@@ -125,10 +155,25 @@ export default function TeacherView({ user, onSignOut }) {
                         <li key={exam.id}>
                           <button 
                             className="w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-900"
-                            onClick={() => handleExamClick(exam)}
+                            onClick={() => toggleExamCollapse(exam.id)}
                           >
                             {exam.title}
                           </button>
+                          {!collapsedExams[exam.id] && (
+                            <ul className="ml-4 mt-2 space-y-1">
+                              {evaluatedExamsData[cls.id]?.[exam.id] &&
+                                Object.entries(evaluatedExamsData[cls.id][exam.id]).map(([studentId, studentExam]) => (
+                                  <li key={studentId}>
+                                    <button
+                                      className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-900"
+                                      onClick={() => handleStudentExamClick(studentExam)}
+                                    >
+                                      {studentExam.studentName}
+                                    </button>
+                                  </li>
+                                ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                   </ul>
@@ -144,6 +189,7 @@ export default function TeacherView({ user, onSignOut }) {
           {view === 'questionsBank' && <QuestionsBankView />}
           {view === 'createClass' && <ClassForm user={user} />}
           {view === 'examCreation' && <ExamCreation user={user} />}
+          {view === 'examReview' && (<ExamReview user={user}/>)}
           {view === 'examPreview' && selectedExam && (
             <ExamPreview
               title={selectedExam.title}
@@ -151,6 +197,9 @@ export default function TeacherView({ user, onSignOut }) {
               selectedClass={selectedExam.class}
               selectedQuestions={selectedExam.questions.map(id => questions.find(q => q.id === id))}
             />
+          )}
+          {view === 'evalExam' && selectedStudentExam && (
+            <EvalExam examData={selectedStudentExam} />
           )}
           {view === 'dashboard' && (
             <div>

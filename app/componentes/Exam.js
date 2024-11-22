@@ -69,9 +69,11 @@ export default function Exam({ exam, user, onFinish }) {
         // Crear un nuevo documento de examen si no existe
         await setDoc(examDocRef, {
           studentEmail: user?.email,
+          studentName: user?.displayName,
           examId: exam.id,
           examTitle: exam.title,
           professor: exam.createdBy,
+          classId: exam.class,
           responses: [newResponse],
           startTime: new Date(startTime),
           completed: false,
