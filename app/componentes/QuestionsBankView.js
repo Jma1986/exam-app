@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase_auth.js";
 
-export default function QuestionsBankView() {
+export default function QuestionsBankView({user, ...rest}) {
   const [questionsBank, setQuestionsBank] = useState({});
   const [fieldFilter, setFieldFilter] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
@@ -17,7 +17,9 @@ export default function QuestionsBankView() {
         const fieldsSet = new Set();
         const subjectsSet = new Set();
 
-        querySnapshot.forEach((doc) => {
+        querySnapshot.docs
+        .filter(doc => doc.data().createdBy === user?.email)
+        .forEach((doc) => {
           const { field, subject, question } = doc.data();
           fieldsSet.add(field);
           if (subject) subjectsSet.add(subject);
@@ -54,7 +56,6 @@ export default function QuestionsBankView() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900">Questions Bank</h1>
       <div className="mb-4 space-y-2">
         <div>
           <label className="block text-gray-700">Filter by Field:</label>

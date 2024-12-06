@@ -10,6 +10,8 @@ import ExamCreation from './ExamCreation';
 import ExamPreview from './ExamPreview';
 import ExamReview from './ExamReview';
 import EvalExam from './EvalExam';
+import LinkButton from './LinkButton';
+import MyLibrary from './MyLibrary';
 
 export default function TeacherView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
@@ -78,42 +80,32 @@ export default function TeacherView({ user, onSignOut }) {
     setView('evalExam');
   };
 
+  const handleView = (view) => {
+    console.log('Changing view to:', view);
+    setView(view);  // Ahora establece la vista directamente
+};
+  
+
   return (
     <div className="w-full min-h-screen flex flex-col">
       {/* Header */}
-      <header className="w-full bg-blue-600 text-gray-900 p-4 flex items-center justify-between">
+      <header className="w-full  text-gray-900 p-4 flex items-center justify-between mb-10">
         {/* Navigation Buttons on the Left */}
         <nav className="flex items-center gap-4">
-          <button
-            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
-            onClick={() => setView('dashboard')}
-          >
-            Dashboard
-          </button>
-          <button
-            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
-            onClick={() => setView('createQuestions')}
-          >
-            Crear preguntas
-          </button>
-          <button
-            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
-            onClick={() => setView('questionsBank')}
-          >
-            Questions Bank
-          </button>
-          <button
-            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
-            onClick={() => setView('examCreation')}
-          >
-            Crear examen
-          </button>
-          <button
-            className="bg-transparent text-gray-900 hover:bg-blue-500 px-3 py-2 rounded"
+        <LinkButton isActive={view === 'classes'} onClick={() => setView('classes')}>
+            My Classes
+          </LinkButton>
+          <LinkButton isActive={view === 'dashboard'} onClick={() => setView('dashboard')}>
+            My Library
+          </LinkButton>
+
+          <LinkButton
+            isActive={view === 'examReview'}
             onClick={() => setView('examReview')}
           >
-            Corregir examen
-          </button>
+            My Reports
+            </LinkButton>
+
         </nav>
         {/* User and Logout Button on the Right */}
         <div className="flex items-center gap-4">
@@ -129,63 +121,10 @@ export default function TeacherView({ user, onSignOut }) {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-grow">
-        {/* Sidebar on the Left */}
-        <aside className="w-64 bg-gray-100 p-4 border-r overflow-y-auto">
-          <div className='w-full flex justify-between'>
-            <h2 className="font-bold text-lg mb-4 text-gray-900">Clases</h2>
-            <button 
-                className='text-black h-full w-6 rounded-md bg-blue-500 hover:bg-blue-400 active:bg-blue-700 transition-all duration-150 transform hover:scale-95'
-                onClick={() => setView('createClass')}>+</button>
-          </div>
-          <ul className="space-y-2">
-            {classesData.map((cls) => (
-              <li key={cls.id}>
-                <button
-                  className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-900"
-                  onClick={() => toggleClassCollapse(cls.id)}
-                >
-                  {cls.name}
-                </button>
-                {!collapsedClasses[cls.id] && (
-                  <ul className="ml-4 mt-2 space-y-1">
-                    {examsData
-                      .filter(exam => exam.class === cls.id)
-                      .map((exam) => (
-                        <li key={exam.id}>
-                          <button 
-                            className="w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-900"
-                            onClick={() => toggleExamCollapse(exam.id)}
-                          >
-                            {exam.title}
-                          </button>
-                          {!collapsedExams[exam.id] && (
-                            <ul className="ml-4 mt-2 space-y-1">
-                              {evaluatedExamsData[cls.id]?.[exam.id] &&
-                                Object.entries(evaluatedExamsData[cls.id][exam.id]).map(([studentId, studentExam]) => (
-                                  <li key={studentId}>
-                                    <button
-                                      className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-900"
-                                      onClick={() => handleStudentExamClick(studentExam)}
-                                    >
-                                      {studentExam.studentName}
-                                    </button>
-                                  </li>
-                                ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        </aside>
-
+      <div className="flex justify-center ">
         {/* Main Dashboard Area */}
-        <main className="flex-grow p-6">
-          {view === 'createQuestions' && <QuestionForm />}
+        <main className=" flex p-6 w-5/6 ">
+          {view === 'createQuestions' && <QuestionForm user={user}/>}
           {view === 'questionsBank' && <QuestionsBankView />}
           {view === 'createClass' && <ClassForm user={user} />}
           {view === 'examCreation' && <ExamCreation user={user} />}
@@ -201,15 +140,7 @@ export default function TeacherView({ user, onSignOut }) {
           {view === 'evalExam' && selectedStudentExam && (
             <EvalExam examData={selectedStudentExam} />
           )}
-          {view === 'dashboard' && (
-            <div>
-              <h1 className="text-2xl font-bold mb-4 text-gray-900">Teacher Dashboard</h1>
-              {/* Future dashboard component will go here */}
-              <div className="bg-white p-4 shadow-md rounded">
-                <p className="text-gray-900">Dashboard content will be added here.</p>
-              </div>
-            </div>
-          )}
+          {view === 'dashboard' && (<MyLibrary user={user} handleView={handleView}/>)}
         </main>
       </div>
     </div>

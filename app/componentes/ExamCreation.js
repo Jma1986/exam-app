@@ -7,7 +7,6 @@ export default function ExamCreation({ user }) {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
-    const [availableClasses, setAvailableClasses] = useState([]);
     const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [questions, setQuestions] = useState([]);
     const [message, setMessage] = useState('');
@@ -16,22 +15,9 @@ export default function ExamCreation({ user }) {
     const [fieldFilter, setFieldFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
+    const [isPublic, setIsPublic] = useState(false); // Nuevo estado para controlar si el examen es público o privado
     const questionsPerPage = 5;
 
-    useEffect(() => {
-        const fetchClasses = async () => {
-            try {
-                const classSnapshot = await getDocs(collection(db, 'clases'));
-                const classes = classSnapshot.docs
-                    .filter(doc => doc.data().professor === user?.email)
-                    .map(doc => ({ id: doc.id, ...doc.data() }));
-                setAvailableClasses(classes);
-            } catch (error) {
-                console.error('Error fetching classes:', error);
-            }
-        };
-        fetchClasses();
-    }, [user]);
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -64,10 +50,6 @@ export default function ExamCreation({ user }) {
             setMessage('Please provide an exam title.');
             return;
         }
-        if (!selectedClass) {
-            setMessage('Please select a class to assign the exam to.');
-            return;
-        }
         if (selectedQuestions.length === 0) {
             setMessage('Please select at least one question for the exam.');
             return;
@@ -77,16 +59,17 @@ export default function ExamCreation({ user }) {
             await addDoc(collection(db, 'examenes_creados'), {
                 title,
                 description,
-                class: selectedClass,
-                questions: selectedQuestions.map(q => q.id),
+                asignedTo: [],
+                questions: selectedQuestions.map(q => q.question),
                 createdBy: user?.email,
-                active: "false",
+                state: "unasigned",
+                isPublic, // Guardar el estado de si el examen es público o privado
             });
             setMessage('Exam created successfully!');
             setTitle('');
             setDescription('');
-            setSelectedClass('');
             setSelectedQuestions([]);
+            setIsPublic(false); // Restablecer a privado como predeterminado
         } catch (error) {
             setMessage(`Error creating exam: ${error.message}`);
         }
@@ -121,7 +104,7 @@ export default function ExamCreation({ user }) {
     }, [fieldFilter, subjectFilter]);
 
     return (
-        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+        <div className="flex flex-grow flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
             <div className="w-full md:w-2/3 p-6 bg-white shadow-lg rounded-lg">
                 <h2 className="text-3xl font-bold mb-6 text-gray-900">Create a New Exam</h2>
                 {message && <div className="mb-4 text-red-600 font-semibold">{message}</div>}
@@ -145,19 +128,7 @@ export default function ExamCreation({ user }) {
                         rows="3"
                     />
                 </div>
-                <div className="mb-6">
-                    <label className="block text-gray-900 text-sm font-semibold mb-2">Assign to Class</label>
-                    <select
-                        value={selectedClass}
-                        onChange={(e) => setSelectedClass(e.target.value)}
-                        className="w-full p-3 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Select a class</option>
-                        {availableClasses.map((cls) => (
-                            <option key={cls.id} value={cls.id}>{cls.name}</option>
-                        ))}
-                    </select>
-                </div>
+                
                 <div className="mb-6">
                     <label className="block text-gray-900 text-sm font-semibold mb-2">Filter Questions by Field</label>
                     <select
@@ -212,6 +183,23 @@ export default function ExamCreation({ user }) {
                             disabled={(currentPage + 1) * questionsPerPage >= filteredQuestions.length}
                         >
                             Next
+                        </button>
+                    </div>
+                </div>
+                <div className="mb-6">
+                    <label className="block text-gray-900 text-sm font-semibold mb-2">Exam Visibility</label>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setIsPublic(false)}
+                            className={`px-4 py-2 rounded-lg shadow-md ${!isPublic ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-900'} transition-all ease-in-out`}
+                        >
+                            Private
+                        </button>
+                        <button
+                            onClick={() => setIsPublic(true)}
+                            className={`px-4 py-2 rounded-lg shadow-md ${isPublic ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-900'} transition-all ease-in-out`}
+                        >
+                            Public
                         </button>
                     </div>
                 </div>

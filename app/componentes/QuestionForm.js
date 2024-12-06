@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase_auth.js";
 import CsvUpload from './csvUpload.js';
 
-export default function QuestionForm() {
+export default function QuestionForm({user, ...rest}) {
   const [questions, setQuestions] = useState([{ question: '', response: '' }]);
   const [field, setField] = useState('');
   const [newFieldVisible, setNewFieldVisible] = useState(false);
@@ -61,7 +61,9 @@ export default function QuestionForm() {
           field: selectedField,
           subject: selectedSubject || null,
           question: q.question,
-          response: q.response || null
+          response: q.response || null,
+          createdBy: user.email,
+          isPublic: false
         });
       }
       console.log("Questions added successfully");
@@ -184,7 +186,7 @@ export default function QuestionForm() {
       </form>
       <div className="w-full md:w-1/3 pl-0 md:ml-12  md:pt-3 p4 space-y-6 bg-white shadow-md rounded-md">
         <h2 className="text-2xl font-bold pl-4 mt-4 text-gray-900">Subir archivo .csv</h2>
-        <CsvUpload />
+        <CsvUpload user={user} />
       </div>
     </div>
   );

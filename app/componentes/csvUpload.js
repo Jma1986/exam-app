@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import { addDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase_auth';
 
-function CsvUpload() {
+function CsvUpload({user, ...rest}) {
   const [fields, setFields] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [field, setField] = useState('');
@@ -82,6 +82,8 @@ function CsvUpload() {
             subject: newSubject || subject,
             question: entry.Pregunta,
             response: entry.Respuesta || '',
+            createdBy: user?.email,
+            isPublic: false,
           });
           successfulUploads++;
         } catch (error) {
