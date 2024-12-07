@@ -17,21 +17,28 @@ export default function QuestionForm({user, ...rest}) {
   // Fetch existing fields and subjects from the database on component mount
   useEffect(() => {
     const fetchFieldsAndSubjects = async () => {
-      const questionsSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
-      const fieldsSet = new Set();
-      const subjectsSet = new Set();
+      try {
+        const questionsSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
+        const fieldsSet = new Set();
+        const subjectsSet = new Set();
 
-      questionsSnapshot.forEach((doc) => {
-        fieldsSet.add(doc.data().field);
-        subjectsSet.add(doc.data().subject);
-      });
+        questionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.createdBy === user?.email) { // Filtrar por usuario actual
+            fieldsSet.add(data.field);
+            subjectsSet.add(data.subject);
+          }
+        });
 
-      setFieldOptions(Array.from(fieldsSet));
-      setSubjectOptions(Array.from(subjectsSet));
+        setFieldOptions(Array.from(fieldsSet));
+        setSubjectOptions(Array.from(subjectsSet));
+      } catch (error) {
+        console.error('Error fetching fields and subjects:', error);
+      }
     };
 
     fetchFieldsAndSubjects();
-  }, []);
+  }, [user]);
 
   const handleQuestionChange = (index, key, value) => {
     const updatedQuestions = [...questions];

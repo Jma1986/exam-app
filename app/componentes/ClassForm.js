@@ -59,7 +59,7 @@ export default function ClassForm({ user }) {
           type="text"
           value={className}
           onChange={(e) => setClassName(e.target.value)}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-gray-700"
           placeholder="Enter class name"
         />
       </div>
@@ -68,7 +68,7 @@ export default function ClassForm({ user }) {
         <textarea
           value={students}
           onChange={(e) => setStudents(e.target.value)}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-gray-700"
           placeholder="Enter student emails, separated by commas"
           rows="4"
         />

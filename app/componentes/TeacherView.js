@@ -4,7 +4,6 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase_auth';
 import QuestionForm from './QuestionForm';
 import QuestionsBankView from './QuestionsBankView';
-import CsvUpload from './csvUpload';
 import ClassForm from './ClassForm';
 import ExamCreation from './ExamCreation';
 import ExamPreview from './ExamPreview';
@@ -13,6 +12,8 @@ import EvalExam from './EvalExam';
 import LinkButton from './LinkButton';
 import MyLibrary from './MyLibrary';
 import MyClasses from './MyClasses';
+import { PiSignOutFill } from "react-icons/pi";
+import { capitalize } from '@/utils/customFunctions';
 
 export default function TeacherView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
@@ -85,7 +86,9 @@ export default function TeacherView({ user, onSignOut }) {
     console.log('Changing view to:', view);
     setView(view);  // Ahora establece la vista directamente
 };
-  
+
+
+
 
   return (
     <div className="w-full min-h-screen flex flex-col">
@@ -110,13 +113,13 @@ export default function TeacherView({ user, onSignOut }) {
         </nav>
         {/* User and Logout Button on the Right */}
         <div className="flex items-center gap-4">
-          <span>{user?.displayName}</span>
+          <span>{capitalize(user?.displayName)}</span>
           <button
             id="sign-out-btn"
             className="bg-red-500 text-white px-4 py-2 rounded shadow-md hover:bg-red-600 transition-all ease-in-out"
             onClick={onSignOut}
           >
-            Sign Out
+            <PiSignOutFill className='text-xl'/>
           </button>
         </div>
       </header>

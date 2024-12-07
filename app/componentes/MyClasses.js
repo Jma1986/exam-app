@@ -1,14 +1,34 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore";
 import { db } from "../firebase_auth";
+import { getDatabase, ref, onValue } from "firebase/database";
 import { IconContext } from "react-icons";
-import { MdGroups2, MdOutlineGroupAdd, MdOutlineGroupOff, MdPersonAdd, MdDelete } from "react-icons/md";
+import {
+  MdGroups2,
+  MdOutlineGroupAdd,
+  MdOutlineGroupOff,
+  MdPersonAdd,
+  MdDelete,
+  MdCheckCircle,
+  MdErrorOutline,
+  MdPersonOutline,
+} from "react-icons/md";
 
 export default function MyClasses({ user, handleView }) {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [view, setView] = useState("classes");
   const [newStudentEmail, setNewStudentEmail] = useState("");
+  const [onlineStatus, setOnlineStatus] = useState({});
+  const [registeredUsers, setRegisteredUsers] = useState({});
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -22,8 +42,37 @@ export default function MyClasses({ user, handleView }) {
         console.error("Error fetching classes:", error);
       }
     };
+
     fetchClasses();
   }, [user]);
+
+  useEffect(() => {
+    const fetchRegisteredUsers = async () => {
+      try {
+        const userSnapshot = await getDocs(collection(db, "users"));
+        const users = {};
+        userSnapshot.forEach((doc) => {
+          users[doc.data().email] = true;
+        });
+        setRegisteredUsers(users);
+      } catch (error) {
+        console.error("Error fetching registered users:", error);
+      }
+    };
+
+    fetchRegisteredUsers();
+  }, []);
+
+  useEffect(() => {
+    // Monitor connection status of all students
+    const dbRealtime = getDatabase();
+    const connectionsRef = ref(dbRealtime, "connections");
+
+    onValue(connectionsRef, (snapshot) => {
+      const connections = snapshot.val() || {};
+      setOnlineStatus(connections);
+    });
+  }, []);
 
   const handleDeleteClass = async (classId) => {
     if (!window.confirm("Are you sure you want to delete this class?")) return;
@@ -75,12 +124,16 @@ export default function MyClasses({ user, handleView }) {
     }
   };
 
+  const isStudentRegistered = (email) => registeredUsers[email] || false;
+  const isStudentConnected = (email) => onlineStatus[email] || false;
+
   return (
     <div className="flex flex-grow justify-between">
-      {/* Sidebar */}
       <div className="w-2/12">
         <button onClick={() => setView("classes")}>
-            <h1 className="font-bold text-gray-900 text-4xl mb-10 hover:text-blue-950">My Groups</h1>
+          <h1 className="font-bold text-gray-900 text-4xl mb-10 hover:text-blue-950">
+            My Groups
+          </h1>
         </button>
         {view === "classPreview" ? (
           <div className="mb-4">
@@ -108,7 +161,6 @@ export default function MyClasses({ user, handleView }) {
         )}
       </div>
 
-      {/* Main Content */}
       <div className="w-9/12">
         {view === "classes" && (
           <ul className="mt-6">
@@ -117,7 +169,6 @@ export default function MyClasses({ user, handleView }) {
                 key={cls.id}
                 className="flex flex-col pl-4 gap-4 border-b-2 border-t-2 border-gray-200 text-gray-800 group hover:font-bold"
               >
-                {/* Class Details */}
                 <div className="flex items-center gap-4 justify-between h-14">
                   <div className="flex items-center gap-4">
                     <IconContext.Provider value={{ className: "text-3xl" }}>
@@ -133,10 +184,13 @@ export default function MyClasses({ user, handleView }) {
                       {cls.name}
                     </li>
                   </div>
-
-                  {/* Delete Button */}
                   <button onClick={() => handleDeleteClass(cls.id)}>
-                    <IconContext.Provider value={{ className: "text-3xl text-red-400 mr-4 hover:text-red-800 hidden group-hover:block" }}>
+                    <IconContext.Provider
+                      value={{
+                        className:
+                          "text-2xl text-red-400 mr-4 hover:text-red-800 hidden group-hover:block",
+                      }}
+                    >
                       <MdOutlineGroupOff title="Delete Group" />
                     </IconContext.Provider>
                   </button>
@@ -148,17 +202,52 @@ export default function MyClasses({ user, handleView }) {
 
         {view === "classPreview" && selectedClass && (
           <div className="w-9/12 ml-8 mt-4">
-            <h2 className="font-bold text-xl mb-2">Students in {selectedClass.name}</h2>
+            <h2 className="font-bold text-gray-900 text-xl mb-2">
+              Students in {selectedClass.name}
+            </h2>
             <ul className="list-disc ml-4">
-              {Array.isArray(selectedClass.students) && selectedClass.students.length > 0 ? (
+              {Array.isArray(selectedClass.students) &&
+              selectedClass.students.length > 0 ? (
                 selectedClass.students.map((student, index) => (
-                  <li key={index} className="flex items-center justify-between text-gray-700">
-                    {student}
-                    <button onClick={() => handleDeleteStudent(student)}>
-                      <IconContext.Provider value={{ className: "text-xl text-red-400 ml-4 hover:text-red-800" }}>
-                        <MdDelete title="Delete Student" />
-                      </IconContext.Provider>
-                    </button>
+                  <li
+                    key={index}
+                    className="flex items-center justify-between text-gray-700"
+                  >
+                    <span>{student}</span>
+                    <div className="flex items-center gap-2">
+                      {isStudentRegistered(student) ? (
+                        <MdCheckCircle
+                          title="Registered"
+                          className="text-green-500"
+                        />
+                      ) : (
+                        <MdPersonOutline
+                          title="Not Registered"
+                          className="text-gray-400"
+                        />
+                      )}
+                      {isStudentConnected(student) ? (
+                        <MdCheckCircle
+                          title="Connected"
+                          className="text-blue-500"
+                        />
+                      ) : (
+                        <MdErrorOutline
+                          title="Disconnected"
+                          className="text-gray-400 ml-4"
+                        />
+                      )}
+                      <button onClick={() => handleDeleteStudent(student)}>
+                        <IconContext.Provider
+                          value={{
+                            className:
+                              " text-red-400 ml-4 hover:text-red-800",
+                          }}
+                        >
+                          <MdOutlineGroupOff title="Delete Student" />
+                        </IconContext.Provider>
+                      </button>
+                    </div>
                   </li>
                 ))
               ) : (

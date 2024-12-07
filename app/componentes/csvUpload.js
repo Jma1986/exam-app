@@ -16,22 +16,28 @@ function CsvUpload({user, ...rest}) {
 
   useEffect(() => {
     const fetchFieldsAndSubjects = async () => {
-      const questionsSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
-      const fieldsSet = new Set();
-      const subjectsSet = new Set();
+      try {
+        const questionsSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
+        const fieldsSet = new Set();
+        const subjectsSet = new Set();
 
-      questionsSnapshot.forEach((doc) => {
-        fieldsSet.add(doc.data().field);
-        subjectsSet.add(doc.data().subject);
-      });
+        questionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.createdBy === user?.email) { // Filtrar por usuario actual
+            fieldsSet.add(data.field);
+            subjectsSet.add(data.subject);
+          }
+        });
 
-      setFields(Array.from(fieldsSet));
-      setSubjects(Array.from(subjectsSet));
+        setFields(Array.from(fieldsSet));
+        setSubjects(Array.from(subjectsSet));
+      } catch (error) {
+        console.error('Error fetching fields and subjects:', error);
+      }
     };
 
     fetchFieldsAndSubjects();
-  }, []);
-
+  }, [user]);
   const handleCsvUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -103,12 +109,12 @@ return (
                 <select className="block w-full mt-1 p-2 border border-gray-300 rounded-md text-gray-700" value={field} onChange={(e) => setField(e.target.value)} required>
                     <option value="">Elige una materia</option>
                     {fields.map((f, index) => (
-                        <option key={index} value={f}>{f}</option>
+                        <option key={index} value={f} >{f}</option>
                     ))}
                     <option value="new">Añade una nueva materia</option>
                 </select>
                 {field === 'new' && (
-                    <input type="text" placeholder="New Field" value={newField} onChange={(e) => { setNewField(e.target.value); setField('new'); }} className="block w-full mt-2 p-2 border border-gray-300 rounded-md" />
+                    <input type="text" placeholder="New Field" value={newField} onChange={(e) => { setNewField(e.target.value); setField('new'); }} className="block w-full mt-2 p-2 border border-gray-300 text-gray-600 rounded-md" />
                 )}
             </div>
             
@@ -122,7 +128,7 @@ return (
                     <option value="new">añade un nuevo tema</option>
                 </select>
                 {subject === 'new' && (
-                    <input type="text" placeholder="New Subject" value={newSubject} onChange={(e) => { setNewSubject(e.target.value); setSubject('new'); }} className="block w-full mt-2 p-2 border border-gray-300 rounded-md" />
+                    <input type="text" placeholder="New Subject" value={newSubject} onChange={(e) => { setNewSubject(e.target.value); setSubject('new'); }} className="block w-full mt-2 p-2 border border-gray-300 text-gray-600 rounded-md" />
                 )}
             </div>
             

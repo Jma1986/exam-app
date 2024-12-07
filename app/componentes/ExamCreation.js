@@ -23,9 +23,12 @@ export default function ExamCreation({ user }) {
         const fetchQuestions = async () => {
             try {
                 const questionSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
-                const fetchedQuestions = questionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const fetchedQuestions = questionSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(question => question.createdBy === user?.email); // Filtrar por usuario actual
+    
                 setQuestions(fetchedQuestions);
-
+    
                 const fields = [...new Set(fetchedQuestions.map(q => q.field))];
                 const subjects = [...new Set(fetchedQuestions.map(q => q.subject))];
                 setAvailableFields(fields);
@@ -35,7 +38,8 @@ export default function ExamCreation({ user }) {
             }
         };
         fetchQuestions();
-    }, []);
+    }, [user]);
+    
 
     const toggleQuestionSelection = (question) => {
         if (selectedQuestions.includes(question)) {
@@ -59,7 +63,6 @@ export default function ExamCreation({ user }) {
             await addDoc(collection(db, 'examenes_creados'), {
                 title,
                 description,
-                asignedTo: [],
                 questions: selectedQuestions.map(q => q.question),
                 createdBy: user?.email,
                 state: "unasigned",

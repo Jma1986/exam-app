@@ -62,7 +62,7 @@ export default function QuestionsBankView({user, ...rest}) {
           <select
             value={fieldFilter}
             onChange={(e) => setFieldFilter(e.target.value)}
-            className="p-2 border rounded w-full"
+            className="p-2 border rounded w-full text-gray-700"
           >
             <option value="">All Fields</option>
             {fields.map((field) => (
@@ -75,7 +75,7 @@ export default function QuestionsBankView({user, ...rest}) {
           <select
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
-            className="p-2 border rounded w-full"
+            className="p-2 border rounded w-full text-gray-700"
           >
             <option value="">All Subjects</option>
             {subjects.map((subject) => (

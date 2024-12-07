@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 
-export default function ExamPreview({ title, description, selectedQuestions }) {
+export default function ExamPreview({ title, description, selectedQuestions, assignedTo }) {
 
 
   const handleDownload = () => {
@@ -9,7 +9,7 @@ export default function ExamPreview({ title, description, selectedQuestions }) {
     textContent += `Description: ${description || 'No description provided'}\n\n`;
     textContent += 'Questions:\n';
     selectedQuestions.forEach((question, index) => {
-      textContent += `${index + 1}. ${question.question}\n`;
+      textContent += `${index + 1}. ${question}\n`;
     });
 
     const blob = new Blob([textContent], { type: 'text/plain' });
@@ -38,6 +38,20 @@ return (
                     ))
                 ) : (
                     <p className="text-gray-700">No questions selected yet.</p>
+                )}
+            </ul>
+        </div>
+        <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-700">Assigned to</h3>
+            <ul className="space-y-2">
+                {assignedTo && assignedTo.length > 0 ? (
+                    assignedTo.map((person, index) => (
+                        <li key={index} className="text-base text-gray-800 ml-4">
+                            {person}
+                        </li>
+                    ))
+                ) : (
+                    <p className="text-gray-700">No assigments selected yet.</p>
                 )}
             </ul>
         </div>
