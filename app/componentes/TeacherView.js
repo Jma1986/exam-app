@@ -12,6 +12,7 @@ import ExamReview from './ExamReview';
 import EvalExam from './EvalExam';
 import LinkButton from './LinkButton';
 import MyLibrary from './MyLibrary';
+import MyClasses from './MyClasses';
 
 export default function TeacherView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
@@ -93,7 +94,7 @@ export default function TeacherView({ user, onSignOut }) {
         {/* Navigation Buttons on the Left */}
         <nav className="flex items-center gap-4">
         <LinkButton isActive={view === 'classes'} onClick={() => setView('classes')}>
-            My Classes
+            My Groups
           </LinkButton>
           <LinkButton isActive={view === 'dashboard'} onClick={() => setView('dashboard')}>
             My Library
@@ -126,9 +127,10 @@ export default function TeacherView({ user, onSignOut }) {
         <main className=" flex p-6 w-5/6 ">
           {view === 'createQuestions' && <QuestionForm user={user}/>}
           {view === 'questionsBank' && <QuestionsBankView />}
-          {view === 'createClass' && <ClassForm user={user} />}
+          {view === 'classForm' && <ClassForm user={user} />}
           {view === 'examCreation' && <ExamCreation user={user} />}
           {view === 'examReview' && (<ExamReview user={user}/>)}
+          {view === 'classes' && (<MyClasses user={user} handleView={handleView}/>)}
           {view === 'examPreview' && selectedExam && (
             <ExamPreview
               title={selectedExam.title}
