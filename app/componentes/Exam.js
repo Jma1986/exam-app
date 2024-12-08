@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDoc, doc, updateDoc, setDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../firebase_auth.js';
 
 export default function Exam({ exam, user, onFinish }) {
@@ -12,31 +12,28 @@ export default function Exam({ exam, user, onFinish }) {
   const [responses, setResponses] = useState([]);
   const [warningCount, setWarningCount] = useState(0);
 
+  const [examDocId, setExamDocId] = useState(null);
+  const [showEndScreen, setShowEndScreen] = useState(false);
+
   useEffect(() => {
     const fetchQuestions = async () => {
-      if (exam && exam.questions) {
-        try {
-          const questionsPromises = exam.questions.map(async (questionId) => {
-            const questionDoc = await getDoc(doc(db, 'Banco de preguntas', questionId));
-            return { id: questionId, ...questionDoc.data() };
-          });
-          const fetchedQuestions = await Promise.all(questionsPromises);
-          setQuestions(shuffleArray(fetchedQuestions));
-          setCurrentQuestionIndex(0);
+      try {
+        const examRef = doc(db, 'examenes_creados', exam.id);
+        const examSnapshot = await getDoc(examRef);
+
+        if (examSnapshot.exists()) {
+          const questionsArray = examSnapshot.data().questions || [];
+          setQuestions(shuffleArray(questionsArray));
           setStartTime(Date.now());
-        } catch (error) {
-          console.error('Error fetching questions: ', error);
+        } else {
+          console.error('No se encontró el examen con el id especificado.');
         }
+      } catch (error) {
+        console.error('Error fetching exam questions:', error);
       }
     };
 
     fetchQuestions();
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('keydown', handlePasteRestriction);
-    return () => {
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('keydown', handlePasteRestriction);
-    };
   }, [exam]);
 
   useEffect(() => {
@@ -46,86 +43,122 @@ export default function Exam({ exam, user, onFinish }) {
     }
   }, [currentQuestionIndex, questions]);
 
-  const shuffleArray = (array) => {
-    return array.sort(() => Math.random() - 0.5);
-  };
+  useEffect(() => {
+    const createExamDoc = async () => {
+      try {
+        const docRef = doc(collection(db, 'examenes_realizados'));
+        const initialData = {
+          studentEmail: user?.email ?? 'no-email@example.com',
+          studentName: user?.displayName ?? 'Unknown Student',
+          examId: exam?.id ?? 'unknown-exam-id',
+          examTitle: exam?.title ?? 'Untitled Exam',
+          professor: exam?.createdBy ?? 'Unknown Professor',
+          responses: [],
+          startTime: new Date().toISOString(),
+          completed: false,
+          warnings: 0,
+          isReviwed: false,
+        };
+
+        await setDoc(docRef, initialData);
+        setExamDocId(docRef.id);
+      } catch (error) {
+        console.error('Error creando el documento de examen:', error);
+      }
+    };
+
+    if (startTime && user && exam) {
+      createExamDoc();
+    }
+  }, [startTime, user, exam]);
+
+  const shuffleArray = (array) => array.sort(() => Math.random() - 0.5);
 
   const handleSubmitAnswer = async () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || !examDocId) return;
 
     const timeTaken = (Date.now() - questionStartTime) / 1000;
     const newResponse = {
-      question: currentQuestion.question,
+      question: currentQuestion,
       answer: answer,
       timeTaken: timeTaken,
     };
 
-    setResponses((prevResponses) => [...prevResponses, newResponse]);
+    const updatedResponses = [...responses, newResponse];
+    setResponses(updatedResponses);
 
     try {
-      const examDocRef = doc(db, 'examenes_realizados', exam.id + '_' + user.email);
-      const examDoc = await getDoc(examDocRef);
-      if (!examDoc.exists()) {
-        // Crear un nuevo documento de examen si no existe
-        await setDoc(examDocRef, {
-          studentEmail: user?.email,
-          studentName: user?.displayName,
-          examId: exam.id,
-          examTitle: exam.title,
-          professor: exam.createdBy,
-          classId: exam.class,
-          responses: [newResponse],
-          startTime: new Date(startTime),
-          completed: false,
-          warnings: warningCount,
-        });
-      } else {
-        // Actualizar el documento de examen existente
-        await updateDoc(examDocRef, {
-          responses: [...examDoc.data().responses, newResponse],
-        });
-      }
+      const examDocRef = doc(db, 'examenes_realizados', examDocId);
+      await updateDoc(examDocRef, {
+        responses: updatedResponses,
+      });
+      console.log(`Documento actualizado con ID: ${examDocId}`);
     } catch (error) {
-      console.error('Error saving response: ', error);
+      console.error('Error al actualizar el documento:', error);
     }
 
     setAnswer('');
-    setCurrentQuestionIndex(currentQuestionIndex + 1);
+
+    // Remover la pregunta actual del estado de preguntas
+    const remainingQuestions = questions.filter((_, index) => index !== currentQuestionIndex);
+    setQuestions(remainingQuestions);
+
+    if (remainingQuestions.length > 0) {
+      setCurrentQuestionIndex(0); // Reiniciar índice a la siguiente pregunta
+    } else {
+      handleFinishExam(); // Finalizar examen si no quedan preguntas
+    }
   };
 
   const handleFinishExam = async () => {
+    if (!examDocId) return;
+
     const totalTimeTaken = (Date.now() - startTime) / 1000;
 
     try {
-      const examDocRef = doc(db, 'examenes_realizados', exam.id + '_' + user.email);
+      const examDocRef = doc(db, 'examenes_realizados', examDocId);
       await updateDoc(examDocRef, {
-        endTime: new Date(),
+        endTime: new Date().toISOString(),
         totalTimeTaken: totalTimeTaken,
-        studentEmail: user?.email,
         completed: true,
       });
+
+      // Actualizar el documento "examenes_creados"
+      const examCreatedRef = doc(db, 'examenes_creados', exam.id);
+      await updateDoc(examCreatedRef, {
+        assignedTo: arrayRemove(user?.email),
+      });
+
       console.log('Exam finished successfully');
     } catch (error) {
-      console.error('Error finishing exam: ', error);
+      console.error('Error finishing exam:', error);
     }
 
     if (document.fullscreenElement) {
       document.exitFullscreen().catch((err) => console.error('Error exiting fullscreen:', err));
     }
 
-    onFinish();
+    setShowEndScreen(true);
+    setTimeout(() => {
+      setShowEndScreen(false);
+      onFinish();
+    }, 5000);
   };
 
   const handleWindowBlur = async () => {
+    if (!examDocId) return;
+
     alert('Por favor, regrese a la pantalla del examen. Cambiar de ventana se registrará.');
-    setWarningCount((prev) => prev + 1);
+    const newWarnings = warningCount + 1;
+    setWarningCount(newWarnings);
+
     try {
-      const examDocRef = doc(db, 'examenes_realizados', exam.id + '_' + user.email);
+      const examDocRef = doc(db, 'examenes_realizados', examDocId);
       await updateDoc(examDocRef, {
-        warnings: warningCount + 1,
+        warnings: newWarnings,
       });
     } catch (error) {
-      console.error('Error updating warnings: ', error);
+      console.error('Error updating warnings:', error);
     }
   };
 
@@ -135,6 +168,23 @@ export default function Exam({ exam, user, onFinish }) {
       alert('No se permite pegar texto durante el examen.');
     }
   };
+
+  useEffect(() => {
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('keydown', handlePasteRestriction);
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('keydown', handlePasteRestriction);
+    };
+  }, []);
+
+  if (showEndScreen) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-green-100">
+        <p className="text-2xl font-bold text-green-800">Examen finalizado. Gracias por participar.</p>
+      </div>
+    );
+  }
 
   if (!currentQuestion) {
     return (
@@ -154,7 +204,7 @@ export default function Exam({ exam, user, onFinish }) {
       </button>
       <div className="flex-grow flex flex-col items-center justify-center">
         <h2 className="text-2xl font-bold mb-4">Pregunta:</h2>
-        <p className="text-gray-800 mb-4">{currentQuestion.question}</p>
+        <p className="text-gray-800 mb-4">{currentQuestion}</p>
         <textarea
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}

@@ -15,103 +15,110 @@ import MyClasses from './MyClasses';
 import { PiSignOutFill } from "react-icons/pi";
 import { capitalize } from '@/utils/customFunctions';
 
+
 export default function TeacherView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
-  const [collapsedClasses, setCollapsedClasses] = useState({});
-  const [collapsedExams, setCollapsedExams] = useState({});
-  const [classesData, setClassesData] = useState([]);
-  const [examsData, setExamsData] = useState([]);
-  const [evaluatedExamsData, setEvaluatedExamsData] = useState({});
-  const [selectedExam, setSelectedExam] = useState(null);
-  const [selectedStudentExam, setSelectedStudentExam] = useState(null);
-  const [questions, setQuestions] = useState([]);
+  const [collapsed, setCollapsed] = useState({ classes: {}, exams: {} });
+  const [data, setData] = useState({
+    classes: [],
+    exams: [],
+    evaluatedExams: {},
+    questions: [],
+  });
+  const [selected, setSelected] = useState({ exam: null, studentExam: null });
 
   useEffect(() => {
-    const fetchClassesAndExams = async () => {
+    const fetchData = async () => {
       try {
-        const classSnapshot = await getDocs(collection(db, 'clases'));
-        const classes = classSnapshot.docs
-          .filter(doc => doc.data().professor === user?.email)
-          .map(doc => ({ id: doc.id, ...doc.data() }));
-        setClassesData(classes);
+        const [classSnapshot, examSnapshot, evaluatedSnapshot, questionSnapshot] = await Promise.all([
+          getDocs(collection(db, 'clases')),
+          getDocs(collection(db, 'examenes_creados')),
+          getDocs(collection(db, 'examenes_evaluados')),
+          getDocs(collection(db, 'Banco de preguntas')),
+        ]);
 
-        const examSnapshot = await getDocs(collection(db, 'examenes_creados'));
-        const exams = examSnapshot.docs
-          .filter(doc => doc.data().createdBy === user?.email)
-          .map(doc => ({ id: doc.id, ...doc.data() }));
-        setExamsData(exams);
+        setData({
+          classes: classSnapshot.docs
+            .filter(doc => doc.data().professor === user?.email)
+            .map(doc => ({ id: doc.id, ...doc.data() })),
 
-        const evaluatedSnapshot = await getDocs(collection(db, 'examenes_evaluados'));
-        const evaluatedExams = evaluatedSnapshot.docs.reduce((acc, doc) => {
-          acc[doc.id] = doc.data();
-          return acc;
-        }, {});
-        setEvaluatedExamsData(evaluatedExams);
+          exams: examSnapshot.docs
+            .filter(doc => doc.data().createdBy === user?.email)
+            .map(doc => ({ id: doc.id, ...doc.data() })),
 
-        const questionSnapshot = await getDocs(collection(db, 'Banco de preguntas'));
-        const fetchedQuestions = questionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setQuestions(fetchedQuestions);
+          evaluatedExams: evaluatedSnapshot.docs.reduce((acc, doc) => {
+            acc[doc.id] = doc.data();
+            return acc;
+          }, {}),
+
+          questions: questionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        });
       } catch (error) {
-        console.error('Error fetching classes, exams, and questions:', error);
+        console.error('Error fetching data:', error);
       }
     };
-    fetchClassesAndExams();
+
+    fetchData();
   }, [user]);
 
-  const toggleClassCollapse = (classId) => {
-    setCollapsedClasses((prev) => ({
+  const toggleCollapse = (type, id) => {
+    setCollapsed(prev => ({
       ...prev,
-      [classId]: !prev[classId],
+      [type]: { ...prev[type], [id]: !prev[type][id] },
     }));
   };
 
-  const toggleExamCollapse = (examId) => {
-    setCollapsedExams((prev) => ({
-      ...prev,
-      [examId]: !prev[examId],
-    }));
+  const changeView = (newView) => {
+    setView(newView);
   };
 
-  const handleExamClick = (exam) => {
-    setSelectedExam(exam);
-    setView('examPreview');
+  const renderView = () => {
+    switch (view) {
+      case 'createQuestions':
+        return <QuestionForm user={user} />;
+      case 'questionsBank':
+        return <QuestionsBankView />;
+      case 'classForm':
+        return <ClassForm user={user} />;
+      case 'examCreation':
+        return <ExamCreation user={user} />;
+      case 'examReview':
+        return <ExamReview user={user} />;
+      case 'classes':
+        return <MyClasses user={user} handleView={changeView} />;
+      case 'examPreview':
+        return (
+          selected.exam && (
+            <ExamPreview
+              title={selected.exam.title}
+              description={selected.exam.description}
+              selectedClass={selected.exam.class}
+              selectedQuestions={selected.exam.questions.map(id => data.questions.find(q => q.id === id))}
+            />
+          )
+        );
+      case 'evalExam':
+        return selected.studentExam && <EvalExam examData={selected.studentExam} />;
+      default:
+        return <MyLibrary user={user} handleView={changeView} />;
+    }
   };
-
-  const handleStudentExamClick = (studentExam) => {
-    setSelectedStudentExam(studentExam);
-    setView('evalExam');
-  };
-
-  const handleView = (view) => {
-    console.log('Changing view to:', view);
-    setView(view);  // Ahora establece la vista directamente
-};
-
-
-
 
   return (
     <div className="w-full min-h-screen flex flex-col">
       {/* Header */}
-      <header className="w-full  text-gray-900 p-4 flex items-center justify-between mb-10">
-        {/* Navigation Buttons on the Left */}
+      <header className="w-full text-gray-900 p-4 flex items-center justify-between mb-10">
         <nav className="flex items-center gap-4">
-        <LinkButton isActive={view === 'classes'} onClick={() => setView('classes')}>
+          <LinkButton isActive={view === 'classes'} onClick={() => changeView('classes')}>
             My Groups
           </LinkButton>
-          <LinkButton isActive={view === 'dashboard'} onClick={() => setView('dashboard')}>
+          <LinkButton isActive={view === 'dashboard'} onClick={() => changeView('dashboard')}>
             My Library
           </LinkButton>
-
-          <LinkButton
-            isActive={view === 'examReview'}
-            onClick={() => setView('examReview')}
-          >
+          <LinkButton isActive={view === 'examReview'} onClick={() => changeView('examReview')}>
             My Reports
-            </LinkButton>
-
+          </LinkButton>
         </nav>
-        {/* User and Logout Button on the Right */}
         <div className="flex items-center gap-4">
           <span>{capitalize(user?.displayName)}</span>
           <button
@@ -119,34 +126,14 @@ export default function TeacherView({ user, onSignOut }) {
             className="bg-red-500 text-white px-4 py-2 rounded shadow-md hover:bg-red-600 transition-all ease-in-out"
             onClick={onSignOut}
           >
-            <PiSignOutFill className='text-xl'/>
+            <PiSignOutFill className="text-xl" />
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex justify-center ">
-        {/* Main Dashboard Area */}
-        <main className=" flex p-6 w-5/6 ">
-          {view === 'createQuestions' && <QuestionForm user={user}/>}
-          {view === 'questionsBank' && <QuestionsBankView />}
-          {view === 'classForm' && <ClassForm user={user} />}
-          {view === 'examCreation' && <ExamCreation user={user} />}
-          {view === 'examReview' && (<ExamReview user={user}/>)}
-          {view === 'classes' && (<MyClasses user={user} handleView={handleView}/>)}
-          {view === 'examPreview' && selectedExam && (
-            <ExamPreview
-              title={selectedExam.title}
-              description={selectedExam.description}
-              selectedClass={selectedExam.class}
-              selectedQuestions={selectedExam.questions.map(id => questions.find(q => q.id === id))}
-            />
-          )}
-          {view === 'evalExam' && selectedStudentExam && (
-            <EvalExam examData={selectedStudentExam} />
-          )}
-          {view === 'dashboard' && (<MyLibrary user={user} handleView={handleView}/>)}
-        </main>
+      <div className="flex justify-center">
+        <main className="flex p-6 w-5/6">{renderView()}</main>
       </div>
     </div>
   );

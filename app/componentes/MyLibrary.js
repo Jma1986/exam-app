@@ -10,6 +10,7 @@ import { TiDelete, TiCancel } from "react-icons/ti";
 import { MdOutlineAssignmentInd, MdAssignmentTurnedIn } from "react-icons/md";
 import QuestionsBankView from './QuestionsBankView';
 import ExamPreview from './ExamPreview';
+import { arrayUnion } from 'firebase/firestore';
 
 export default function MyLibrary({ user, handleView }) {
   const [examLibrary, setExamLibrary] = useState([]);
@@ -32,7 +33,7 @@ export default function MyLibrary({ user, handleView }) {
     };
 
     fetchExams();
-  }, [user]);
+  }, [user, examPreview]);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -65,21 +66,27 @@ export default function MyLibrary({ user, handleView }) {
 
   const handleAssignExam = async (examId, classId) => {
     try {
-      const selectedClass = classes.find(cls => cls.id === classId);
-      if (selectedClass) {
-        const studentEmails = selectedClass.students || [];
-        const examRef = doc(db, 'examenes_creados', examId);
-        await updateDoc(examRef, {
-          assignedTo: studentEmails
-        });
-        alert(`Exam assigned to ${selectedClass.name}`);
-        setShowClassSelection(null);
-      }
+        const selectedClass = classes.find(cls => cls.id === classId);
+        if (selectedClass) {
+            const studentEmails = selectedClass.students || [];
+            const examRef = doc(db, 'examenes_creados', examId);
+
+            // Usar arrayUnion para agregar sin sobrescribir
+            await updateDoc(examRef, {
+                assignedTo: arrayUnion(...studentEmails)
+            });
+
+            alert(`Exam assigned to ${selectedClass.name}`);
+            setShowClassSelection(null);
+        } else {
+            alert('Class not found.');
+        }
     } catch (error) {
-      console.error('Error assigning exam:', error);
-      alert('Failed to assign the exam. Please try again.');
+        console.error('Error assigning exam:', error);
+        alert('Failed to assign the exam. Please try again.');
     }
-  };
+};
+
 
   return (
     <div className='flex flex-grow justify-between'>
@@ -131,11 +138,11 @@ export default function MyLibrary({ user, handleView }) {
                 <button onClick={() => setShowClassSelection(exam.id)} className=' text-blue-600 hover:underline' title='Assign exam'>
                     <MdOutlineAssignmentInd />
                   </button>
-                  {exam.assignedTo ? <IconContext.Provider value={{ className: "text-green-600" }}>
-                     <MdAssignmentTurnedIn title='No assigments'/>
+                  {exam.assignedTo.length > 0 ? <IconContext.Provider value={{ className: "text-green-600" }}>
+                     <MdAssignmentTurnedIn title='Has assigments'/>
                   </IconContext.Provider> :
                   <IconContext.Provider value={{ className: "text-gray-400" }}>
-                  <MdAssignmentTurnedIn title='Has assigments' />
+                  <MdAssignmentTurnedIn title='No assigments' />
                </IconContext.Provider>}
                   <button onClick={() => handleDeleteExam(exam.id)}>
                     <IconContext.Provider value={{ className: "text-xl text-red-400 mr-4 hover:text-red-800 " }}>

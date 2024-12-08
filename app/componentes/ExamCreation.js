@@ -63,9 +63,9 @@ export default function ExamCreation({ user }) {
             await addDoc(collection(db, 'examenes_creados'), {
                 title,
                 description,
+                assignedTo: [], // Inicialmente no asignado a ninguna clase
                 questions: selectedQuestions.map(q => q.question),
                 createdBy: user?.email,
-                state: "unasigned",
                 isPublic, // Guardar el estado de si el examen es público o privado
             });
             setMessage('Exam created successfully!');
