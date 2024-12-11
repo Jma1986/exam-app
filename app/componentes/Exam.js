@@ -203,12 +203,12 @@ export default function Exam({ exam, user, onFinish }) {
         Finalizar prueba
       </button>
       <div className="flex-grow flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-bold mb-4">Pregunta:</h2>
+        <h2 className="text-2xl text-gray-900 font-bold mb-4">Pregunta:</h2>
         <p className="text-gray-800 mb-4">{currentQuestion}</p>
         <textarea
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          className="w-full max-w-lg p-2 border rounded mb-4"
+          className="w-full max-w-lg p-2 border rounded mb-4 text-gray-700"
           placeholder="Escribe tu respuesta aquí..."
           rows="4"
         />

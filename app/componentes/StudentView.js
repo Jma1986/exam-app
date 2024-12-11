@@ -6,6 +6,7 @@ import ExamReview from './ExamReview.js';
 import LinkButton from './LinkButton';
 import { capitalize } from '@/utils/customFunctions';
 import { PiSignOutFill } from 'react-icons/pi';
+import StudentDashboard from './StudentDashboard.js';
 
 export default function StudentView({ user, onSignOut }) {
   const [view, setView] = useState('dashboard');
@@ -130,7 +131,7 @@ export default function StudentView({ user, onSignOut }) {
 
           {/* Dashboard view */}
           {view === 'dashboard' && (
-            <h1>dashboard</h1>
+            <StudentDashboard user={user}/>
           )}
 
           {/* Exam view */}

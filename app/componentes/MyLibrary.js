@@ -33,7 +33,7 @@ export default function MyLibrary({ user, handleView }) {
     };
 
     fetchExams();
-  }, [user, examPreview]);
+  }, [user, examPreview, view]);
 
   useEffect(() => {
     const fetchClasses = async () => {
