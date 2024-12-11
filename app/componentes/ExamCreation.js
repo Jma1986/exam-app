@@ -65,6 +65,7 @@ export default function ExamCreation({ user }) {
                 description,
                 assignedTo: [], // Inicialmente no asignado a ninguna clase
                 questions: selectedQuestions.map(q => q.question),
+                questionsIds: selectedQuestions.map(q => q.id),
                 createdBy: user?.email,
                 isPublic, // Guardar el estado de si el examen es público o privado
             });

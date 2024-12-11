@@ -7,13 +7,12 @@ import QuestionsBankView from './QuestionsBankView';
 import ClassForm from './ClassForm';
 import ExamCreation from './ExamCreation';
 import ExamPreview from './ExamPreview';
-import ExamReview from './ExamReview';
-import EvalExam from './EvalExam';
 import LinkButton from './LinkButton';
 import MyLibrary from './MyLibrary';
 import MyClasses from './MyClasses';
 import { PiSignOutFill } from "react-icons/pi";
 import { capitalize } from '@/utils/customFunctions';
+import MyReports from './MyReports';
 
 
 export default function TeacherView({ user, onSignOut }) {
@@ -83,7 +82,7 @@ export default function TeacherView({ user, onSignOut }) {
       case 'examCreation':
         return <ExamCreation user={user} />;
       case 'examReview':
-        return <ExamReview user={user} />;
+        return <MyReports user={user} />;
       case 'classes':
         return <MyClasses user={user} handleView={changeView} />;
       case 'examPreview':
@@ -97,8 +96,6 @@ export default function TeacherView({ user, onSignOut }) {
             />
           )
         );
-      case 'evalExam':
-        return selected.studentExam && <EvalExam examData={selected.studentExam} />;
       default:
         return <MyLibrary user={user} handleView={changeView} />;
     }

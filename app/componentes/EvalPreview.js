@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function EvalExam({ exam }) {
+export default function EvalPreview({ exam }) {
   return (
     <div className="w-full min-h-screen flex flex-col p-6">
       <h2 className="text-2xl font-bold mb-4">Evaluación del Examen</h2>
